@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <!--CSP-->
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="referrer" content="no-referrer" />
+  <title>privacy-redact - Detect and redact private content</title>
+  <meta name="description" content="Library and browser components that find private content in text, screenshots, and PDFs, redact it, and strip hidden metadata." />
+  <meta name="keywords" content="pii detection, redaction, screenshot, pdf, exif, ocr, privacy" />
+  <meta name="author" content="privacy-redact" />
+  <meta name="robots" content="index, follow, max-image-preview:large" />
+  <meta name="theme-color" content="#fafaf9" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#1c1917" media="(prefers-color-scheme: dark)" />
+  <meta name="color-scheme" content="light dark" />
+  <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
+  <link rel="manifest" href="./manifest.webmanifest" />
+
+  <!-- Open Graph / Twitter -->
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="privacy-redact" />
+  <meta property="og:title" content="privacy-redact - Detect and redact private content" />
+  <meta property="og:description" content="Find private content in text, screenshots, and PDFs, redact it, and strip hidden metadata." />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:alt" content="A document before and after private fields are redacted" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="privacy-redact - Detect and redact private content" />
+  <meta name="twitter:description" content="Find private content in text, screenshots, and PDFs, redact it, and strip hidden metadata." />
+
+  <script type="module" src="/src/main.js"></script>
+</head>
+<body>
+  <div class="bg-glow" aria-hidden="true"></div>
+
+  <header class="topbar">
+    <a class="brand" href="#" id="brand" aria-label="privacy-redact home">
+      <svg viewBox="0 0 64 64" width="30" height="30" aria-hidden="true"><path d="M32 4 8 13v17c0 15 10 26 24 30 14-4 24-15 24-30V13z" fill="currentColor"/><rect x="18" y="22" width="28" height="6" rx="3" fill="var(--canvas)"/><rect x="18" y="32" width="20" height="6" rx="3" fill="var(--canvas)" opacity=".85"/><rect x="18" y="42" width="24" height="6" rx="3" fill="var(--canvas)" opacity=".55"/></svg>
+      <span>privacy-redact</span>
+    </a>
+    <div class="top-right">
+      <span class="pill" title="Everything runs in your browser. Files are never uploaded."><i class="dot"></i> 100% on-device · nothing uploaded</span>
+      <button id="btn-settings" class="btn ghost sm" type="button" aria-pressed="false" aria-controls="settings">Settings</button>
+      <button id="btn-reset" class="btn ghost" hidden>↺ New file</button>
+    </div>
+  </header>
+
+  <noscript><p class="error">This page runs entirely in your browser and needs JavaScript enabled.</p></noscript>
+  <main>
+    <!-- ───────────── Landing ───────────── -->
+    <section id="landing">
+      <div class="hero landing-copy">
+        <h1>Detect it.<br /><span class="grad">Redact it.</span></h1>
+        <p class="lede">Drop an image or PDF. This page finds card numbers, emails, phone numbers, addresses, faces, and barcodes, then writes a copy with the hidden metadata removed.</p>
+      </div>
+
+      <privacy-redact-review></privacy-redact-review>
+
+      <div class="try-row landing-copy">
+        <span class="try-label">No file handy? Try a fictional sample:</span>
+        <div id="samples" class="samples">
+          <button class="chip" data-sample="sample-paystub.png">Pay stub</button>
+          <button class="chip" data-sample="sample-chat-dark.png">Chat with API keys</button>
+          <button class="chip" data-sample="sample-id-card.png">Driver's license</button>
+          <button class="chip" data-sample="sample-medical-form.png">Medical form</button>
+          <button class="chip" data-sample="sample-checkout.png">Checkout page</button>
+          <button class="chip" data-sample="sample-group-photo.jpg">Group photo</button>
+          <button class="chip" data-sample="sample-with-gps.jpg">Photo with GPS</button>
+          <button class="chip" data-sample="sample-lease.pdf">Lease PDF</button>
+        </div>
+      </div>
+
+      <div class="steps landing-copy">
+        <div class="step"><span class="n">1</span><b>Drop</b><span>any image or PDF</span></div>
+        <div class="step-arrow" aria-hidden="true">→</div>
+        <div class="step"><span class="n">2</span><b>Detect</b><span>private fields are marked</span></div>
+        <div class="step-arrow" aria-hidden="true">→</div>
+        <div class="step"><span class="n">3</span><b>Save</b><span>a redacted, metadata-free file</span></div>
+      </div>
+
+      <div class="features landing-copy">
+        <div class="feat"><h3>Finds private content</h3><p>Cards (Luhn-checked), SSNs, emails, phones, street addresses, account numbers, birth dates, API keys, faces, barcodes, and QR codes.</p></div>
+        <div class="feat"><h3>Strips hidden data</h3><p>GPS coordinates, camera serials, timestamps, and PDF author info are removed, and the saved file is opened again to check.</p></div>
+        <div class="feat"><h3>Stays in the browser</h3><p>OCR and face detection run locally. A strict Content-Security-Policy blocks network calls. Works offline.</p></div>
+        <div class="feat"><h3>The text is gone</h3><p>Effects average pixels into coarse blocks before smoothing, and PDFs are flattened, so the text under the box is gone.</p></div>
+      </div>
+
+      <section class="faq landing-copy" aria-labelledby="faq-title">
+        <h2 id="faq-title">Frequently asked questions</h2>
+        <details><summary>Are my files uploaded anywhere?</summary><p>No. This page has no server. OCR, face detection, and barcode scanning run inside your browser tab, and a strict Content-Security-Policy blocks the page from sending your file anywhere.</p></details>
+        <details><summary>Can the blur be reversed?</summary><p>Pixels are averaged into large blocks with random noise before any smoothing, so the detail is discarded. For maximum certainty pick Blackout, which replaces the area with a solid fill.</p></details>
+        <details><summary>Does it remove EXIF, GPS, and other metadata?</summary><p>Yes. The export is re-encoded from raw pixels, so EXIF, GPS coordinates, camera serial numbers, and PDF author info are not copied, and the saved file is opened again and checked.</p></details>
+        <details><summary>How do I redact a PDF?</summary><p>Drop it here. Every page is rendered, sensitive text is detected and hidden, and the pages are flattened into a new PDF. Up to 60 pages. The output is not text-selectable.</p></details>
+        <details><summary>What does it detect?</summary><p>Credit cards, SSNs and tax IDs, emails, phone numbers, street addresses, account numbers, labelled dates of birth, API keys, faces, barcodes, and QR codes. Names are not auto-detected. Drag a box over anything it missed.</p></details>
+        <details><summary>Does it work offline?</summary><p>Yes. Models, WebAssembly, and fonts are bundled, so once the page has loaded you can disconnect and keep redacting.</p></details>
+      </section>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <span>privacy-redact · All rights reserved</span>
+    <span>Your files never leave this tab.</span>
+  </footer>
+</body>
+</html>
