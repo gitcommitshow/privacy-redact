@@ -1,0 +1,15 @@
+name: E2E
+# Slow (downloads Chromium, builds, OCRs the exported file), so it is run on demand
+# from the Actions tab rather than on every push or pull request.
+on: workflow_dispatch
+permissions: { contents: read }
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 24, cache: npm }
+      - run: npm ci
+      - name: End-to-end (installs Chromium, builds, serves, tests)
+        run: npm run test:e2e:ci
