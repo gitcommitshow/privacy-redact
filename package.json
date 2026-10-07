@@ -1,6 +1,6 @@
 {
   "name": "privacy-redact",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "type": "module",
   "description": "Library for detecting private content, redacting it, and handling document metadata. Browser components cover OCR, faces, barcodes, and PDF pages.",
   "exports": {
