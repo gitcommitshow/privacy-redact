@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.1](https://github.com/gitcommitshow/privacy-redact/compare/v1.0.0...v1.0.1) (2026-10-07)
+
+
+### Bug Fixes
+
+* add repository field for npm provenance publishing ([#17](https://github.com/gitcommitshow/privacy-redact/issues/17)) ([d06540d](https://github.com/gitcommitshow/privacy-redact/commit/d06540d7c675c32cc69f9181e7a31e60a2bcf949))
+
 ## 1.0.0 (2026-10-06)
 
 
