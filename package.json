@@ -17,6 +17,14 @@
     "./io/metadata": "./src/io/metadata.js"
   },
   "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gitcommitshow/privacy-redact.git"
+  },
+  "homepage": "https://github.com/gitcommitshow/privacy-redact#readme",
+  "bugs": {
+    "url": "https://github.com/gitcommitshow/privacy-redact/issues"
+  },
   "files": [
     "src",
     "scripts/copy-assets.mjs",
