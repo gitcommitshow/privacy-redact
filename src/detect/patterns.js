@@ -98,7 +98,7 @@ const RULES = [
   {
     // "Mobile No.98765-43210" — the dot is glued on, so a bare number pattern never sees a word boundary.
     type: 'phone',
-    re: /\b(?:Mobile|Mob|Phone|Tel|Telephone|Cell|Contact)\s*(?:No|Number|#)?\.?\s*[:#\-]?\s*(\+?\d[\d\s.\-()]{7,16}\d)/gi,
+    re: /\b(?:Mobile|Mob|Phone|Ph|Phn|Tel|Telephone|Cell|Whatsapp|WA|Contact)\s*(?:No|Number|#)?\.?\s*[:#\-]?\s*(\+?\d[\d\s.\-()]{7,16}\d)/gi,
     group: 1,
     validate(m) {
       const n = m.replace(/\D/g, '').length;
@@ -110,6 +110,12 @@ const RULES = [
     type: 'phone',
     re: /(?<![\w@/])(?:\+91[\s.\-]?)?[6-9]\d{4}[\s.\-]\d{5}(?!\d)/g,
     confidence: 0.88,
+  },
+  {
+    // Unlabelled bare Indian mobile: 9977343444 (10 digits, starts 6-9, not part of a longer number/decimal/ID).
+    type: 'phone',
+    re: /(?<![\w@/.\-])[6-9]\d{9}(?![\d\-@/]|\.\d)/g,
+    confidence: 0.75,
   },
   {
     // 123 Main Street, Apt 4B
