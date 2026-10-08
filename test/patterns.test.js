@@ -49,6 +49,22 @@ test('mobile number glued to its label', () => {
   assert.deepEqual(found('Mobile No.12', ['phone']), []);
 });
 
+test('short phone labels (ph, phn, whatsapp) catch a bare 10-digit number', () => {
+  assert.equal(found('hi I am available at ph 9977343444', ['phone'])[0].s, '9977343444');
+  assert.equal(found('Phn: 9977343444', ['phone'])[0].s, '9977343444');
+  assert.equal(found('Whatsapp 99773 43444', ['phone'])[0].s, '99773 43444');
+});
+
+test('unlabelled bare 10-digit Indian mobile is found', () => {
+  assert.equal(found('call 9977343444 today', ['phone'])[0].s, '9977343444');
+});
+
+test('bare 10-digit rule ignores longer numbers, decimals and non-mobile prefixes', () => {
+  assert.deepEqual(found('ref 99773434441234', ['phone']), []);
+  assert.deepEqual(found('total 9977343444.55', ['phone']), []);
+  assert.deepEqual(found('order 1234567890', ['phone']), []);
+});
+
 test('address', () => {
   assert.equal(found('Lives at 742 Evergreen Terrace, Apt 4B today', ['address'])[0].s, '742 Evergreen Terrace, Apt 4B');
   assert.equal(found('1600 Pennsylvania Ave NW, Washington, DC 20500', ['address'])[0].s, '1600 Pennsylvania Ave NW'); // quadrant suffix included
