@@ -3,6 +3,7 @@
 import { cpSync, mkdirSync, existsSync, readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { OCR_CORE_FILES } from '../src/detect/ocrCore.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 /**
@@ -29,9 +30,9 @@ function copy(src, dest) {
   cpSync(src, dest, { recursive: true });
 }
 
-// Tesseract OCR: worker + LSTM-only WASM cores (plain + SIMD) + English model
+// Tesseract OCR: worker + every LSTM-only WASM core the OCR module can pick + English model
 copy(nm('tesseract.js/dist/worker.min.js'), out('tesseract/worker.min.js'));
-for (const f of ['tesseract-core-lstm.wasm.js', 'tesseract-core-simd-lstm.wasm.js']) {
+for (const f of Object.values(OCR_CORE_FILES)) {
   copy(nm(`tesseract.js-core/${f}`), out(`tesseract/${f}`));
 }
 copy(nm('@tesseract.js-data/eng/4.0.0_best_int/eng.traineddata.gz'), out('tesseract/eng.traineddata.gz'));

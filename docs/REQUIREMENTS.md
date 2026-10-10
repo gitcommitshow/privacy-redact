@@ -61,7 +61,7 @@ These describe the browser harness as it works today.
 ### Privacy of the browser app
 
 - ✅ After the page has loaded, processing a file makes no network request. The only fetch in the app loads a built-in sample from the same origin.
-- ✅ OCR worker, WASM, language data, face models, and PDF fonts are copied into `public/vendor` at install time and loaded from there.
+- ✅ Text reading, face finding, and PDF rendering work with no download. Everything they need ships with the install.
 - ✅ A production build injects a Content-Security-Policy that allows connections only to the page itself, and blocks forms and plugins.
 - ✅ No analytics, cookies, accounts, or telemetry.
 - ✅ Dev and preview servers listen on localhost only.
@@ -116,18 +116,20 @@ These apply to propose. They do not release the file.
 
 ### Same engine, local assets
 
-- Reuse `patterns.js`, `textRegions.js`, and the export checks. Do not fork a second set of rules.
-- Set Tesseract `workerPath`, `corePath`, and `langPath` to the vendored files, with `cacheMethod: 'none'`.
-- Load face models from the vendored directory.
-- Pass PDF bytes in memory, with `isEvalSupported: false`, and keep the production Content-Security-Policy behavior for any browser surface that remains.
-- Install from the lockfile so every package hash stays pinned.
+- A file sent through the command finds the same fields as the same file dropped into the browser app. A rule fixed for one is fixed for both.
+- Scanning works offline. The OCR engine, its language data, face models, and PDF fonts come with the install. A scan never downloads them, and never from a third-party host.
+- Updating the app or its dependencies must not quietly stop text from being read. If the fastest way to run OCR is not available on a machine, the scan uses a slower one that is. Text reading is reported as failed only when no way works.
+- By default, the same document gives the same findings on every machine. A host can choose faster text reading, which may read a few characters differently on different processors.
+- Opening a PDF never runs code inside it, and the file is never written to a temporary location to be read.
+- Any browser surface that remains keeps the rule that the page can only talk to itself.
+- Every install uses the exact package versions the project was tested with.
 
 ### What the agent path must not do
 
 - Do not send the original or the redacted image to a model "to check".
-- Do not return `page.lines`, the metadata sidebar values, or `window.__privacyRedact`.
-- Do not run the Vite dev server as the tool.
-- Do not call `createWorker` with Tesseract's default CDN paths.
+- Do not return the words the scanner read, the metadata values, or any debug handle the browser app exposes.
+- Do not run the development server as the tool. It is for working on the app, not for processing files.
+- Do not let the text reader download its engine or language data from the internet.
 - Do not add a clipboard watcher or a folder watcher unless it is a separate, explicit mode. The default tool redacts one file per call.
 - Do not set a PDF open password, prompt for one, or invent one. An encrypted input with no password fails the call. The prompt stays on the browser open path, and setting a password stays on the browser Save path.
 

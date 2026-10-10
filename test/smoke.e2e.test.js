@@ -106,7 +106,8 @@ ok(!doc.getAuthor() && !doc.getTitle() && !doc.getProducer(), 'PDF info dictiona
 ok(!pdfBytes.includes(Buffer.from('123-45-6789')), 'PDF contains no selectable secret text');
 
 ok(external.length === 0, `no external network requests${external.length ? ': ' + external.join(', ') : ''}`);
-const real = problems.filter((p) => !/GPU stall|WebGL|swiftshader|Automatic fallback/i.test(p));
+// ZXing (third-party) logs this while scanning images that have no barcode in them; it is not an app error.
+const real = problems.filter((p) => !/GPU stall|WebGL|swiftshader|Automatic fallback|MultiFormatReader: non-ReaderException/i.test(p));
 if (real.length) console.log('console problems:\n' + real.join('\n'));
 ok(real.length === 0, 'no console errors / CSP violations');
 await browser.close();

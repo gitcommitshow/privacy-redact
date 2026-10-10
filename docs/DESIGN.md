@@ -163,6 +163,8 @@ Decoding turns an image into one page and a PDF into a page per sheet, up to 60 
 
 Each page is scanned in three passes: text, codes, then faces. Text is read with an English OCR model, then matched against the shared text rules. Faces use a small local model, with extra tiles on large photos. Codes use the browser's detector when it exists, and a JavaScript decoder otherwise.
 
+The OCR worker, engine, and language data are loaded from the vendored copies with `cacheMethod: 'none'`, never from Tesseract's default CDN. The engine comes in three WASM builds: relaxed SIMD, SIMD, and baseline. `src/detect/ocrCore.js` lists them, and both the copy script and the loader read that list. The loader passes Tesseract one exact file, not a directory, so a Tesseract upgrade that asks for a new file name cannot break text reading. It tries the builds in order and falls back to the baseline build if one fails to load. The default preference, `'stable'`, skips relaxed SIMD, whose results can differ between CPUs. A host opts in with `setOcrCorePreference('fast')` from `privacy-redact/detect/ocr`. PDFs are read from bytes in memory with `isEvalSupported: false`.
+
 The preview paints redactions on a copy of the page. The original pixels stay untouched until export. Blur and pixelate average pixels into coarse blocks before any smoothing. Blackout replaces the area with a solid fill. Export writes a new file from those pixels, so hidden metadata and any PDF text layer are left behind. The new file is opened again to confirm the metadata is empty. When the export has an open password, that check uses the same password.
 
 ```mermaid

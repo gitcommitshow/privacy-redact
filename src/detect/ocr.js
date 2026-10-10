@@ -3,42 +3,70 @@
  * Returns lines of words in the *original* canvas' pixel coordinates.
  */
 import { createWorker } from 'tesseract.js';
+import { coreCandidates, OCR_CORE_PREFERENCES } from './ocrCore.js';
 
 let workerPromise = null;
 let progressCb = null;
+let corePreference = 'stable';
 
 const abs = (p) => new URL(import.meta.env.BASE_URL + p, window.location.href).href;
 
-/** True when this browser runs WebAssembly SIMD (same probe module that wasm-feature-detect uses). */
-function hasWasmSimd() {
+/** True if this browser accepts the given WASM probe module. */
+function wasmSupports(bytes) {
   try {
-    return WebAssembly.validate(new Uint8Array([0, 97, 115, 109, 1, 0, 0, 0, 1, 5, 1, 96, 0, 1, 123, 3, 2, 1, 0, 10, 10, 1, 8, 0, 65, 0, 253, 15, 253, 98, 11]));
+    return WebAssembly.validate(new Uint8Array(bytes));
   } catch {
     return false;
   }
 }
 
+// Probe modules from wasm-feature-detect. A wrong probe only means a slower core is picked.
+const SIMD_PROBE = [0, 97, 115, 109, 1, 0, 0, 0, 1, 5, 1, 96, 0, 1, 123, 3, 2, 1, 0, 10, 10, 1, 8, 0, 65, 0, 253, 15, 253, 98, 11];
+const RELAXED_SIMD_PROBE = [0, 97, 115, 109, 1, 0, 0, 0, 1, 5, 1, 96, 0, 1, 123, 3, 2, 1, 0, 10, 15, 1, 13, 0, 65, 1, 253, 15, 65, 2, 253, 15, 253, 128, 2, 11];
+
 /**
- * The one OCR core file to load, picked here instead of letting tesseract.js choose from a directory.
- * tesseract.js 7 asks a modern browser for a relaxed-SIMD build that is not vendored, so the request
- * falls through to the dev server's index.html and the worker fails ("Text reading failed").
+ * Choose 'stable' (default, same OCR output on every CPU) or 'fast' (relaxed SIMD when available).
+ * Takes effect for the next worker, so call it before the first scan or after disposeOcr().
  */
-function coreFile() {
-  return abs(`vendor/tesseract/tesseract-core-${hasWasmSimd() ? 'simd-' : ''}lstm.wasm.js`);
+export function setOcrCorePreference(preference) {
+  if (!OCR_CORE_PREFERENCES.includes(preference)) {
+    throw new Error(`Unknown OCR core preference "${preference}". Use one of: ${OCR_CORE_PREFERENCES.join(', ')}.`);
+  }
+  corePreference = preference;
+}
+
+/**
+ * Start a worker on the first core that loads. We pick the core file ourselves instead of handing
+ * tesseract.js a directory, so a tesseract.js upgrade that asks for a new file name cannot break OCR.
+ */
+async function startWorker() {
+  const files = coreCandidates(corePreference, { simd: wasmSupports(SIMD_PROBE), relaxedSimd: wasmSupports(RELAXED_SIMD_PROBE) });
+  let lastError;
+  for (const file of files) {
+    try {
+      const worker = await createWorker('eng', 1, {
+        workerPath: abs('vendor/tesseract/worker.min.js'),
+        corePath: abs(`vendor/tesseract/${file}`),
+        langPath: abs('vendor/tesseract'),
+        gzip: true,
+        cacheMethod: 'none',
+        logger: (m) => { if (m.status === 'recognizing text' && progressCb) progressCb(m.progress); },
+      });
+      await worker.setParameters({ user_defined_dpi: '300' });
+      return worker;
+    } catch (err) {
+      lastError = err;
+      console.warn(`[privacy-redact] OCR core ${file} did not load, trying the next one`, err);
+    }
+  }
+  throw lastError;
 }
 
 function getWorker() {
   if (!workerPromise) {
-    workerPromise = createWorker('eng', 1, {
-      workerPath: abs('vendor/tesseract/worker.min.js'),
-      corePath: coreFile(),
-      langPath: abs('vendor/tesseract'),
-      gzip: true,
-      cacheMethod: 'none',
-      logger: (m) => { if (m.status === 'recognizing text' && progressCb) progressCb(m.progress); },
-    }).then(async (w) => {
-      await w.setParameters({ user_defined_dpi: '300' });
-      return w;
+    workerPromise = startWorker().catch((err) => {
+      workerPromise = null;
+      throw err;
     });
   }
   return workerPromise;
