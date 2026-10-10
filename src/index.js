@@ -3,7 +3,7 @@
  * OCR, faces, barcodes, PDF rendering, and canvas export stay in their own modules
  * so a server does not load a browser.
  */
-export { findSensitive, luhn, CATEGORIES, TEXT_TYPES } from './detect/patterns.js';
+export { findSensitive, luhn, verhoeff, CATEGORIES, TEXT_TYPES } from './detect/patterns.js';
 export {
   redactDocument, redactPlainText, redactTranscript, documentTranscript, transcriptFromLines, regionsFromLines,
 } from './detect/textRegions.js';

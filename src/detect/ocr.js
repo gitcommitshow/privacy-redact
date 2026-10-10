@@ -9,11 +9,29 @@ let progressCb = null;
 
 const abs = (p) => new URL(import.meta.env.BASE_URL + p, window.location.href).href;
 
+/** True when this browser runs WebAssembly SIMD (same probe module that wasm-feature-detect uses). */
+function hasWasmSimd() {
+  try {
+    return WebAssembly.validate(new Uint8Array([0, 97, 115, 109, 1, 0, 0, 0, 1, 5, 1, 96, 0, 1, 123, 3, 2, 1, 0, 10, 10, 1, 8, 0, 65, 0, 253, 15, 253, 98, 11]));
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * The one OCR core file to load, picked here instead of letting tesseract.js choose from a directory.
+ * tesseract.js 7 asks a modern browser for a relaxed-SIMD build that is not vendored, so the request
+ * falls through to the dev server's index.html and the worker fails ("Text reading failed").
+ */
+function coreFile() {
+  return abs(`vendor/tesseract/tesseract-core-${hasWasmSimd() ? 'simd-' : ''}lstm.wasm.js`);
+}
+
 function getWorker() {
   if (!workerPromise) {
     workerPromise = createWorker('eng', 1, {
       workerPath: abs('vendor/tesseract/worker.min.js'),
-      corePath: abs('vendor/tesseract'),
+      corePath: coreFile(),
       langPath: abs('vendor/tesseract'),
       gzip: true,
       cacheMethod: 'none',

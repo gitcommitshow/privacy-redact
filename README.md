@@ -63,6 +63,8 @@ Three redaction styles, seven document types — all produced by the real app. *
 | 📞 **Phone numbers** | `(415) 555-2671`, `+1 415 555 2671`, `+44 20 7946 0958` | US + international patterns |
 | 🏠 **Home addresses** | `742 Evergreen Terrace, Apt 4B`, `Springfield, IL 62704`, `PO Box 12`, Canadian & UK postcodes | Street/suffix, City-State-ZIP, PO box rules |
 | 🏦 **Account numbers** | `Account No: 00123456789`, `Routing # 021000021`, `MRN`, `Policy`, IBANs | Label-aware: redacts the *value*, not the label |
+| 🆔 **Aadhaar numbers** | `2341 2341 2346`, `Aadhaar No: 2341-2341-2346` | 12 digits, first digit 2-9, Verhoeff checksum when unlabelled |
+| 🧾 **PAN (India tax ID)** | `ABCPE1234F`, `PAN: ABCPE1234F` | `AAAAA9999A` shape with a valid holder-type letter; labelled values tolerate OCR look-alike swaps |
 | 🎂 **Dates of birth** | `DOB: 04/12/1988`, `Date of Birth March 3, 1990` | Only when labelled – ordinary dates are left alone |
 | 🔑 **API keys & tokens** | `sk-…`, `AKIA…`, `ghp_…`, `xoxb-…`, JWTs, `password: …` | Vendor prefixes + `key=value` |
 | 🙂 **Faces** | Photos, ID pictures, group shots | SSD-MobileNet via TensorFlow.js (tiled scan for small faces) |
