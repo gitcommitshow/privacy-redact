@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.0.2](https://github.com/gitcommitshow/privacy-redact/compare/v1.0.1...v1.0.2) (2026-10-10)
+
+
+### Bug Fixes
+
+* pdfjs dist version issue ([#21](https://github.com/gitcommitshow/privacy-redact/issues/21)) ([f4437f3](https://github.com/gitcommitshow/privacy-redact/commit/f4437f306b5b4640526a4c5bff5e82d04ae8a048))
+* redact phone numbers after short labels and bare 10-digit mobiles ([#19](https://github.com/gitcommitshow/privacy-redact/issues/19)) ([7650d9f](https://github.com/gitcommitshow/privacy-redact/commit/7650d9fea576065bfd008a63dbc529359f121ed6))
+
 ## [1.0.1](https://github.com/gitcommitshow/privacy-redact/compare/v1.0.0...v1.0.1) (2026-10-07)
 
 
