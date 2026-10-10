@@ -62,30 +62,39 @@ export async function loadFile(file, onStatus) {
 
   const data = new Uint8Array(await file.arrayBuffer());
   const base = new URL(import.meta.env.BASE_URL + 'vendor/pdfjs/', window.location.href).href;
-  const pdf = await pdfjs.getDocument({
+  // In pdf.js 6 only the loading task can be destroyed (PDFDocumentProxy has no destroy()).
+  const loadingTask = pdfjs.getDocument({
     data,
     standardFontDataUrl: base + 'standard_fonts/',
     cMapUrl: base + 'cmaps/',
     cMapPacked: true,
+    wasmUrl: base + 'wasm/',
+    iccUrl: base + 'iccs/',
     isEvalSupported: false,
-  }).promise;
-  const meta = await readPdfMetadata(pdf);
-  const count = Math.min(pdf.numPages, MAX_PDF_PAGES);
-  const pages = [];
-  for (let i = 1; i <= count; i++) {
-    onStatus?.(`Rendering page ${i} of ${count}…`);
-    const page = await pdf.getPage(i);
-    const viewport = page.getViewport({ scale: PDF_SCALE });
-    const canvas = document.createElement('canvas');
-    canvas.width = Math.floor(viewport.width);
-    canvas.height = Math.floor(viewport.height);
-    const ctx = canvas.getContext('2d', { willReadFrequently: true });
-    ctx.fillStyle = '#fff';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    await page.render({ canvasContext: ctx, viewport }).promise;
-    pages.push(canvas);
-    page.cleanup();
+  });
+  try {
+    const pdf = await loadingTask.promise;
+    const meta = await readPdfMetadata(pdf);
+    const numPages = pdf.numPages;
+    const count = Math.min(numPages, MAX_PDF_PAGES);
+    const pages = [];
+    for (let i = 1; i <= count; i++) {
+      onStatus?.(`Rendering page ${i} of ${count}…`);
+      const page = await pdf.getPage(i);
+      const viewport = page.getViewport({ scale: PDF_SCALE });
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.floor(viewport.width);
+      canvas.height = Math.floor(viewport.height);
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      await page.render({ canvasContext: ctx, viewport }).promise;
+      pages.push(canvas);
+      page.cleanup();
+    }
+    return { kind, name, pages, meta, truncated: numPages > MAX_PDF_PAGES };
+  } finally {
+    // Always release the worker, even if parsing or rendering failed.
+    await loadingTask.destroy().catch(() => {});
   }
-  pdf.destroy();
-  return { kind, name, pages, meta, truncated: pdf.numPages > MAX_PDF_PAGES };
 }

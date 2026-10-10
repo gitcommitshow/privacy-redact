@@ -46,9 +46,12 @@ if (existsSync(faceModelDir)) {
   console.warn(`[assets] missing ${faceModelDir} - did you run npm install?`);
 }
 
-// PDF.js fonts + CMaps (needed for PDFs that don't embed their fonts)
+// PDF.js fonts + CMaps (needed for PDFs that don't embed their fonts).
+// wasm/ (image decoders such as JPEG2000) and iccs/ (colour profiles) exist from pdf.js 5 on.
 copy(nm('pdfjs-dist/standard_fonts'), out('pdfjs/standard_fonts'));
 copy(nm('pdfjs-dist/cmaps'), out('pdfjs/cmaps'));
+copy(nm('pdfjs-dist/wasm'), out('pdfjs/wasm'));
+copy(nm('pdfjs-dist/iccs'), out('pdfjs/iccs'));
 
 // Blend fonts (Crimson Pro, IBM Plex Sans) for static pages under public/ such as the wiki,
 // which Vite does not process and so cannot resolve the font imports in src/style.css.
