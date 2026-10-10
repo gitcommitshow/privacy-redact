@@ -33,7 +33,7 @@ All three destroy the underlying pixels (block-averaging happens *before* any sm
 
 ## 3 · Driver's license — ID card with photo and barcode
 
-**Found:** licence number, address, date of birth, face, barcode. (Names aren't auto-detected — see [Limitations](../README.md#limitations--please-read).)
+**Found:** licence number, address, date of birth, face, barcode. (Names aren't auto-detected — see [Limitations](../README.md#limitations).)
 
 ![ID card before/after in all three styles](examples/id-card-comparison.png)
 
