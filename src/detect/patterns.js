@@ -8,6 +8,8 @@
 export const CATEGORIES = {
   card:    { label: 'Credit cards',      icon: '💳' },
   ssn:     { label: 'SSN / national ID', icon: '🪪' },
+  aadhaar: { label: 'Aadhaar numbers',   icon: '🆔' },
+  pan:     { label: 'PAN (India tax ID)', icon: '🧾' },
   email:   { label: 'Emails',            icon: '✉️' },
   phone:   { label: 'Phone numbers',     icon: '📞' },
   address: { label: 'Home addresses',    icon: '🏠' },
@@ -18,7 +20,7 @@ export const CATEGORIES = {
   barcode: { label: 'Barcodes & QR',     icon: '▦' },
 };
 
-export const TEXT_TYPES = ['card', 'ssn', 'email', 'phone', 'address', 'account', 'dob', 'secret'];
+export const TEXT_TYPES = ['card', 'ssn', 'aadhaar', 'pan', 'email', 'phone', 'address', 'account', 'dob', 'secret'];
 
 /** Luhn checksum – used to tell real card numbers from random digit runs. */
 export function luhn(digits) {
@@ -32,6 +34,55 @@ export function luhn(digits) {
     alt = !alt;
   }
   return digits.length > 0 && sum % 10 === 0;
+}
+
+// Verhoeff tables (multiplication and permutation) used by the Aadhaar checksum.
+const VERHOEFF_D = [
+  [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], [1, 2, 3, 4, 0, 6, 7, 8, 9, 5], [2, 3, 4, 0, 1, 7, 8, 9, 5, 6],
+  [3, 4, 0, 1, 2, 8, 9, 5, 6, 7], [4, 0, 1, 2, 3, 9, 5, 6, 7, 8], [5, 9, 8, 7, 6, 0, 4, 3, 2, 1],
+  [6, 5, 9, 8, 7, 1, 0, 4, 3, 2], [7, 6, 5, 9, 8, 2, 1, 0, 4, 3], [8, 7, 6, 5, 9, 3, 2, 1, 0, 4],
+  [9, 8, 7, 6, 5, 4, 3, 2, 1, 0],
+];
+const VERHOEFF_P = [
+  [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], [1, 5, 7, 6, 2, 8, 3, 0, 9, 4], [5, 8, 0, 3, 7, 9, 6, 1, 4, 2],
+  [8, 9, 1, 6, 0, 4, 3, 5, 2, 7], [9, 4, 5, 3, 1, 2, 6, 8, 7, 0], [4, 2, 8, 6, 5, 7, 3, 9, 0, 1],
+  [2, 7, 9, 3, 8, 0, 6, 4, 1, 5], [7, 0, 4, 6, 9, 1, 3, 2, 5, 8],
+];
+
+/** Verhoeff checksum - used to tell real Aadhaar numbers from random 12-digit runs. */
+export function verhoeff(digits) {
+  let c = 0;
+  for (let i = 0; i < digits.length; i++) {
+    const n = digits.charCodeAt(digits.length - 1 - i) - 48;
+    if (n < 0 || n > 9) return false;
+    c = VERHOEFF_D[c][VERHOEFF_P[i % 8][n]];
+  }
+  return digits.length > 0 && c === 0;
+}
+
+// PAN is 5 letters, 4 digits, 1 letter. OCR swaps look-alike characters, so these maps repair a labelled value.
+const PAN_DIGIT_TO_LETTER = { 0: 'O', 1: 'I', 2: 'Z', 5: 'S', 6: 'G', 8: 'B' };
+const PAN_LETTER_TO_DIGIT = { O: '0', D: '0', I: '1', L: '1', Z: '2', S: '5', G: '6', B: '8' };
+
+// A table border or bracket right after the last character is often read as part of it ("ANQPS5958J|").
+const PAN_TRAILING_NOISE = '|])!/\\';
+const PAN_HOLDER_TYPES = 'PCHFATBLJG';
+
+/**
+ * True if a 10-char value is a PAN once common OCR look-alike swaps are undone.
+ * `minExact` is how many characters must already be the right kind without any repair.
+ */
+function looksLikePan(value, minExact = 0) {
+  if (value.length !== 10) return false;
+  let exact = 0;
+  for (let i = 0; i < 10; i++) {
+    const c = value[i];
+    const wantLetter = i < 5 || i === 9;
+    if (wantLetter ? (c >= 'A' && c <= 'Z') : (c >= '0' && c <= '9')) { exact++; continue; }
+    const repaired = wantLetter ? PAN_DIGIT_TO_LETTER[c] : PAN_LETTER_TO_DIGIT[c];
+    if (!repaired && !(i === 9 && PAN_TRAILING_NOISE.includes(c))) return false;
+  }
+  return exact >= minExact;
 }
 
 const STATES = 'AL|AK|AZ|AR|CA|CO|CT|DE|DC|FL|GA|HI|ID|IL|IN|IA|KS|KY|LA|ME|MD|MA|MI|MN|MS|MO|MT|NE|NV|NH|NJ|NM|NY|NC|ND|OH|OK|OR|PA|RI|SC|SD|TN|TX|UT|VT|VA|WA|WV|WI|WY';
@@ -80,6 +131,38 @@ const RULES = [
     re: /\b(?:SSN|SS#|Social\s+Security(?:\s+(?:No|Number|#))?\.?|SIN|Tax\s*ID|TIN|EIN)\s*[:#\-]?\s*([\dXx*\- ]{9,12})\b/gi,
     group: 1,
     confidence: 0.9,
+  },
+  {
+    // Aadhaar, unlabelled: 12 digits (optionally grouped 4-4-4), first digit 2-9, must pass the Verhoeff checksum.
+    type: 'aadhaar',
+    re: /(?<![\d\-])(?<!\d[ \-])[2-9]\d{3}([ \-]?)\d{4}\1\d{4}(?!\d|[ \-]\d|-)/g,
+    validate: (m) => (verhoeff(m.replace(/\D/g, '')) ? 0.95 : 0),
+  },
+  {
+    // Aadhaar, labelled ("Aadhaar No: 2341 2341 2346", "UID 234123412346"). No checksum, so OCR digit slips still match.
+    type: 'aadhaar',
+    re: /\b(?:aa?dha{1,2}r|UID(?:AI)?)(?:\s+(?:Card|No|Number|Num|ID))*\.?\s*[:#\-\u2013\u2014]?\s*(\d{4}[ \-]?\d{4}[ \-]?\d{4})(?!\d)/gi,
+    group: 1,
+    confidence: 0.9,
+  },
+  {
+    // PAN, unlabelled: AAAAA9999A. The 4th letter is the holder type (P person, C company, H HUF, F firm, ...).
+    // Up to two characters may be OCR look-alike swaps (S for 5, O for 0), but the rest must already fit.
+    type: 'pan',
+    re: /\b[A-Z0-9]{10}\b/g,
+    validate(m) {
+      if (!looksLikePan(m, 8)) return 0;
+      const fourth = /[A-Z]/.test(m[3]) ? m[3] : PAN_DIGIT_TO_LETTER[m[3]];
+      return PAN_HOLDER_TYPES.includes(fourth) ? 0.95 : 0;
+    },
+  },
+  {
+    // PAN, labelled ("PAN: ABCDE1234F", "Permanent Account Number (PAN) ABCDE1234F"). The label makes it safe to accept
+    // a value split by a space, with look-alike swaps, or with a table border glued to the last character.
+    type: 'pan',
+    re: /\b(?:Permanent\s+Account\s+(?:No|Number)|PAN)(?:\s*\(\s*PAN\s*\))?(?:\s+(?:No|Number|Card))?\.?\s*[:;,#=\-\u2013\u2014]?\s*([A-Z0-9]{5} ?[A-Z0-9]{4} ?[A-Z0-9|\])!\/\\])(?![A-Za-z0-9])/gi,
+    group: 1,
+    validate: (m) => (looksLikePan(m.replace(/\s/g, '').toUpperCase().slice(-10)) ? 0.9 : 0),
   },
   {
     type: 'phone',

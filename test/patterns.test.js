@@ -25,6 +25,43 @@ test('ssn', () => {
   assert.deepEqual(found('ref 000-12-3456', ['ssn']), []);
 });
 
+test('PAN: bare, labelled and OCR-garbled labelled values', () => {
+  assert.deepEqual(found('Assessee ABCPE1234F filed', ['pan']), [{ type: 'pan', s: 'ABCPE1234F' }]);
+  assert.deepEqual(found('(PAN: AAACX1234A)', ['pan']), [{ type: 'pan', s: 'AAACX1234A' }]);
+  assert.equal(found('Permanent Account Number (PAN) ABCPE1234F', ['pan'])[0].s, 'ABCPE1234F');
+  assert.equal(found('PAN No. ABCPE1234F', ['pan'])[0].s, 'ABCPE1234F');
+  assert.equal(found('PAN: A8CPE1234F', ['pan'])[0].s, 'A8CPE1234F'); // 8 read in place of B
+});
+
+test('PAN in an ITAT cause-title cell, with typical OCR damage', () => {
+  assert.deepEqual(found('Mumbai-400 004 PAN: ANQPS5958J', ['pan']), [{ type: 'pan', s: 'ANQPS5958J' }]);
+  assert.equal(found('PAN: ANQPS5958|', ['pan'])[0].s, 'ANQPS5958|');          // last letter read as a table border
+  assert.equal(found('PAN : ANQPS 5958J', ['pan'])[0].s, 'ANQPS 5958J');        // value split by a space
+  assert.equal(found('PAN; ANQPSS958J', ['pan'])[0].s, 'ANQPSS958J');           // 5 read as S, odd separator
+  assert.equal(found('as ANQPSS958J here', ['pan'])[0].s, 'ANQPSS958J');        // unlabelled, one swap
+});
+
+test('unlabelled PAN-shaped guesses stay strict', () => {
+  assert.deepEqual(found('call 8888888888 now', ['pan']), []);       // all look-alike swaps, no real structure
+  assert.deepEqual(found('call 9977343444 now', ['pan']), []);
+  assert.deepEqual(found('PAN: ABCDE', ['pan']), []);
+});
+
+test('Aadhaar: grouped, plain and labelled', () => {
+  assert.deepEqual(found('UID 2341 2341 2346 issued', ['aadhaar']), [{ type: 'aadhaar', s: '2341 2341 2346' }]);
+  assert.equal(found('no 234123412346.', ['aadhaar'])[0].s, '234123412346');
+  assert.equal(found('Aadhaar No: 2341-2341-2346', ['aadhaar'])[0].s, '2341-2341-2346');
+  assert.equal(found('Aadhar Card No. 1234 5678 9012', ['aadhaar'])[0].s, '1234 5678 9012'); // labelled, no checksum needed
+});
+
+test('PAN and Aadhaar ignore look-alikes', () => {
+  assert.deepEqual(found('code ABCXE1234F', ['pan']), []);           // 'X' is not a holder type
+  assert.deepEqual(found('PAN 1234567890', ['pan']), []);            // not PAN-shaped
+  assert.deepEqual(found('ref 234123412347', ['aadhaar']), []);      // checksum fails
+  assert.deepEqual(found('ref 1341 2341 2346', ['aadhaar']), []);    // cannot start with 0 or 1
+  assert.deepEqual(found('Card 4111 1111 1111 1111', ['aadhaar']), []);
+});
+
 test('email', () => {
   assert.deepEqual(found('mail jane.doe+x@example.co.uk, thanks', ['email']), [{ type: 'email', s: 'jane.doe+x@example.co.uk' }]);
 });

@@ -11,7 +11,7 @@ import {
 } from '../prefs/scan.js';
 
 const TAGS = {
-  card: 'Credit card', ssn: 'SSN / ID', email: 'Email', phone: 'Phone', address: 'Address', account: 'Account no.',
+  card: 'Credit card', ssn: 'SSN / ID', aadhaar: 'Aadhaar', pan: 'PAN', email: 'Email', phone: 'Phone', address: 'Address', account: 'Account no.',
   dob: 'Birth date', secret: 'Secret / key', face: 'Face', barcode: 'Barcode / QR', manual: 'Manual',
 };
 const CAT_ORDER = [...SCAN_TYPES, 'manual'];
