@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.3](https://github.com/gitcommitshow/privacy-redact/compare/v1.0.2...v1.0.3) (2026-10-10)
+
+
+### Bug Fixes
+
+* text read fail because of missing relaxed simd ([#22](https://github.com/gitcommitshow/privacy-redact/issues/22)) ([04cb3c2](https://github.com/gitcommitshow/privacy-redact/commit/04cb3c2c354d829481d0ea610b3cb83992707ce3))
+
 ## [1.0.2](https://github.com/gitcommitshow/privacy-redact/compare/v1.0.1...v1.0.2) (2026-10-10)
 
 
