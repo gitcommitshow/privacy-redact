@@ -12,6 +12,19 @@ Requires Node.js 24 or later. Browser components need Chrome or Edge 119+, Firef
 
 ![Before and after: a fictional pay stub with the SSN, address, email, phone, card, account numbers, face, QR code and barcode blurred](docs/before-after.png)
 
+## Features
+
+Supported media types:
+
+- **Server side** (`privacy-redact`): text, including OCR output from your own engine
+- **Browser side** (`privacy-redact/ui`, `privacy-redact/react`): PNG, JPG, WebP, GIF, BMP, AVIF, and pasted screenshots, plus PDFs. HEIC is not supported
+
+Ways to use it:
+
+- **Server only:** call `redactDocument` for text. No browser code is needed.
+- **Server for text, React for the UI:** use `redactDocument` on the server, and mount `PrivacyRedactReview` only where images and PDFs are handled.
+- **Browser only:** the text entry is plain JavaScript and also runs in the page. The review component runs decoding, OCR, face and barcode detection, review, and save in the page, so no server is required.
+
 ## Quick start
 
 ### Text
