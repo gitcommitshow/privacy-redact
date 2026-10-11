@@ -193,9 +193,9 @@ export function attachController(host, initial = {}) {
     $('transcript-card').classList.toggle('open', open);
   }
 
-  /** Text fields still hidden in the preview. The transcript redaction follows these. */
-  function activeTranscriptTypes() {
-    return enabledTextTypes(state.scan).filter((id) => state.catOn[id] !== false);
+  /** Boxes still on, one list per page. The transcript mask follows these, so the text matches the image. */
+  function activeBoxesByPage() {
+    return state.doc.pages.map((p) => activeRegions(p));
   }
 
   /** Keep the Redacted switch in step with the reading that will be copied. */
@@ -223,7 +223,7 @@ export function attachController(host, initial = {}) {
     const failed = pages.some((p) => p.ocr === 'fail');
     const text = documentTranscript(
       pages.map((p) => (p.ocr === 'done' ? p.lines : [])),
-      { redact: state.transcriptRedacted !== false, types: activeTranscriptTypes() },
+      { redact: state.transcriptRedacted !== false, boxes: activeBoxesByPage() },
     );
     if (pending && !text) return { text: '', empty: 'Reading the document…', pending: true };
     if (!text && failed) return { text: '', empty: 'Text reading failed.', pending: false };
@@ -236,7 +236,7 @@ export function attachController(host, initial = {}) {
   function redactedTranscript() {
     return documentTranscript(
       state.doc.pages.map((p) => (p.ocr === 'done' ? p.lines : [])),
-      { redact: true, types: activeTranscriptTypes() },
+      { redact: true, boxes: activeBoxesByPage() },
     );
   }
 

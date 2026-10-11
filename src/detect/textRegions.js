@@ -108,14 +108,56 @@ export function redactTranscript(lines, types = TEXT_TYPES) {
 }
 
 /**
+ * Mask the words of one page that sit under a box. Position only: the text rules are not
+ * consulted, so a box drawn by hand, a face, or a barcode hides the words beneath it, and a
+ * box that is off lets them show, the same as the image.
+ * @param {{words:any[]}[]} lines
+ * @param {{x:number,y:number,w:number,h:number}[]} boxes boxes still on, in canvas pixels
+ */
+export function redactUnderBoxes(lines, boxes = []) {
+  if (!lines?.length) return '';
+  const rows = lines.map((line) => {
+    const { text, spans } = lineToText(line);
+    return text ? maskRanges(text, coveredRanges(text, spans, boxes)) : '';
+  });
+  return rows.filter(Boolean).join('\n');
+}
+
+/**
+ * Character ranges of one line whose center sits inside a box. A space between two covered
+ * characters is covered too, so a multi-word value reads as one run of bullets.
+ */
+function coveredRanges(text, spans, boxes) {
+  const covered = new Array(text.length).fill(false);
+  for (const { start, end, word } of spans) {
+    const b = word.bbox;
+    const charW = (b.x1 - b.x0) / (end - start);
+    const cy = (b.y0 + b.y1) / 2;
+    for (let i = start; i < end; i++) {
+      const cx = b.x0 + (i - start + 0.5) * charW;
+      covered[i] = boxes.some((r) => cx >= r.x && cx <= r.x + r.w && cy >= r.y && cy <= r.y + r.h);
+    }
+  }
+  for (let i = 1; i + 1 < text.length; i++) {
+    if (text[i] === ' ' && covered[i - 1] && covered[i + 1]) covered[i] = true;
+  }
+  return covered.map((on, i) => (on ? { start: i, end: i + 1 } : null)).filter(Boolean);
+}
+
+/**
  * Every page in one string. One page is just its lines.
  * More than one page keeps its page number so a copy still shows where each sheet started.
+ * With `redact` and `boxes` (one list per page), the mask follows those boxes. Without `boxes`,
+ * the text rules for `types` decide, as before.
  */
-export function documentTranscript(pageLines, { redact = false, types = TEXT_TYPES } = {}) {
+export function documentTranscript(pageLines, { redact = false, types = TEXT_TYPES, boxes = null } = {}) {
   const pages = pageLines || [];
   const parts = [];
   for (let i = 0; i < pages.length; i++) {
-    const text = redact ? redactTranscript(pages[i], types) : transcriptFromLines(pages[i]);
+    let text;
+    if (!redact) text = transcriptFromLines(pages[i]);
+    else if (boxes) text = redactUnderBoxes(pages[i], boxes[i] || []);
+    else text = redactTranscript(pages[i], types);
     if (!text) continue;
     parts.push(pages.length > 1 ? `Page ${i + 1}\n${text}` : text);
   }
