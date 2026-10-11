@@ -51,6 +51,14 @@ export function attachController(host, initial = {}) {
   const cur = () => state.doc.pages[state.page];
   const activeRegions = (p) => p.regions.filter(isActive);
   const preview = $('preview');
+  /** Safety net: keep the preview inside its column even when the stylesheet did not load. */
+  function fitPreviewToColumn(canvas) {
+    if (!canvas) return;
+    canvas.style.display = 'block';
+    canvas.style.maxWidth = '100%';
+    canvas.style.height = 'auto';
+  }
+  fitPreviewToColumn(preview);
   let rafId = 0;
   const schedule = () => { cancelAnimationFrame(rafId); rafId = requestAnimationFrame(renderNow); };
 
