@@ -1,6 +1,6 @@
 # privacy-redact
 
-[![npm version](https://img.shields.io/npm/v/privacy-redact)](https://www.npmjs.com/package/privacy-redact)
+[![Demo](https://img.shields.io/badge/demo-live-3f6212)](https://gitcommitshow.github.io/privacy-redact/) [![npm version](https://img.shields.io/npm/v/privacy-redact)](https://www.npmjs.com/package/privacy-redact)
 
 Detect and redact private data in text, screenshots, and PDFs. It runs locally, and nothing is uploaded.
 
