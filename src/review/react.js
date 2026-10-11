@@ -5,8 +5,10 @@ import { createElement, useEffect, useRef } from 'react';
 import './element.js';
 
 /** Drop-in review screen. `onResult` runs when the person saves, and only then. */
-export function PrivacyRedactReview({ file, style, strength, onResult }) {
+export function PrivacyRedactReview({ file, style, strength, actions, onResult }) {
   const ref = useRef(null);
+  // Compare the action list by value, so an inline array does not reset the screen on every render.
+  const actionsKey = actions ? JSON.stringify(actions) : '';
 
   useEffect(() => {
     const el = ref.current;
@@ -33,6 +35,12 @@ export function PrivacyRedactReview({ file, style, strength, onResult }) {
     if (!el || !file) return;
     el.open(file);
   }, [file]);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || !actions) return;
+    el.actions = actions;
+  }, [actionsKey]);
 
   return createElement('privacy-redact-review', { ref });
 }

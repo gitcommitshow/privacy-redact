@@ -5,6 +5,7 @@
 import { CATEGORIES, TEXT_TYPES } from '../detect/patterns.js';
 import { regionsFromLines, maskHint, documentTranscript } from '../detect/textRegions.js';
 import { renderRedactions } from '../render/effects.js';
+import { normalizeActions, downloadAction } from './actions.js';
 import {
   SCAN_TYPES, PICTURE_SCAN_TYPES, loadScanPrefs, saveScanPrefs, defaultScanPrefs,
   normalizeScanPrefs, enabledTextTypes, enabledSteps, emailPhonePrefs, scanScopeText,
@@ -22,7 +23,7 @@ const DROP_TITLE = 'Drop a screenshot, photo, or PDF here';
  * Bind the review flow to one element. Queries stay in its shadow tree. Page paste
  * is ignored while the person is typing in the host.
  * @param {HTMLElement} host
- * @param {{ style?: string, strength?: number }} [initial]
+ * @param {{ style?: string, strength?: number, actions?: unknown }} [initial]
  */
 export function attachController(host, initial = {}) {
   const root = host.shadowRoot;
@@ -44,7 +45,10 @@ export function attachController(host, initial = {}) {
     return el;
   };
 
-  const state = { doc: null, page: 0, style: 'blur', strength: 0.65, catOn: {}, scan: loadScanPrefs(), scanning: false, run: 0, transcriptRedacted: true };
+  const state = {
+    doc: null, page: 0, style: 'blur', strength: 0.65, catOn: {}, scan: loadScanPrefs(), scanning: false, run: 0, transcriptRedacted: true,
+    actions: normalizeActions(undefined), sendAs: 'both',
+  };
   let nextId = 1;
 
   const isActive = (r) => state.catOn[r.type] !== false && r.on;
@@ -240,6 +244,143 @@ export function attachController(host, initial = {}) {
     );
   }
 
+  /** Text is still being read on at least one page, so the transcript cannot be released yet. */
+  function textPending() {
+    if (!state.doc) return false;
+    return enabledSteps(state.scan).includes('ocr') && state.doc.pages.some((p) => !p.ocr);
+  }
+
+  /** Give a release button its look, part names, and label from its action. */
+  function styleButton(node, action) {
+    node.className = action.variant === 'primary' ? 'btn primary big' : `btn ${action.variant} wide`;
+    node.dataset.actionId = action.id;
+    node.setAttribute('part', `action action-${action.variant} action-${action.id}`);
+    node.textContent = action.label;
+    return node;
+  }
+
+  /** A release button for a host action. Its label is plain text, never parsed as HTML. */
+  function hostButton(action) {
+    const node = document.createElement('button');
+    node.type = 'button';
+    node.addEventListener('click', () => runAction(action, node));
+    return styleButton(node, action);
+  }
+
+  /** Put the release buttons in list order. The Save node stays in the DOM when the list leaves it out, so its listener still works. */
+  function renderActions() {
+    const save = $('btn-save');
+    const nodes = state.actions.map((action) => (action.builtin ? styleButton(save, action) : hostButton(action)));
+    const saveListed = nodes.includes(save);
+    save.hidden = !saveListed;
+    if (!saveListed) nodes.push(save);
+    nodes.push($('btn-copy'));
+    $('actions').replaceChildren(...nodes);
+    const fileActions = state.actions.filter((a) => a.outputs.includes('file'));
+    $('fmt-wrap').hidden = fileActions.length > 0 && fileActions.every((a) => a.format);
+    $('send-as').hidden = !state.actions.some((a) => a.choose);
+    syncActionButtons();
+  }
+
+  /** Apply a host action list. A list that fails the rules throws, and the previous list stays. */
+  function setActions(list) {
+    state.actions = normalizeActions(list);
+    renderActions();
+  }
+
+  /** Outputs an action releases right now. A "choose" action follows the person's Send as pick. */
+  function outputsFor(action) {
+    let outs = action.outputs;
+    if (action.choose) outs = state.sendAs === 'both' ? ['file', 'text'] : [state.sendAs];
+    if (outs.includes('text') && textPending()) outs = outs.filter((o) => o !== 'text');
+    return (outs.length || !action.choose) ? outs : ['file'];
+  }
+
+  /** True when a button must stay disabled: its outputs are not ready, or no document is open. */
+  function actionBlocked(action) {
+    if (!action.outputs.length) return false;
+    if (!state.doc || state.scanning) return true;
+    return !action.choose && action.outputs.includes('text') && textPending();
+  }
+
+  /** Enable or disable the release buttons, Copy, and the Send as choice from the current scan state. */
+  function syncActionButtons() {
+    for (const action of state.actions) {
+      const node = root.querySelector(`[data-action-id="${action.id}"]`);
+      if (node) node.disabled = actionBlocked(action);
+    }
+    $('btn-copy').disabled = !state.doc || state.scanning;
+    $('send-as-file').textContent = state.doc?.kind === 'pdf' ? 'PDF' : 'Image';
+    const pending = textPending();
+    for (const btn of root.querySelectorAll('#send-as [data-send]')) {
+      const pick = btn.dataset.send;
+      btn.disabled = !state.doc || state.scanning || (pick !== 'file' && pending);
+      btn.classList.toggle('on', pick === state.sendAs);
+      btn.setAttribute('aria-checked', String(pick === state.sendAs));
+    }
+  }
+
+  // Send as: the person picks what a "choose" action releases.
+  for (const btn of root.querySelectorAll('#send-as [data-send]')) {
+    btn.addEventListener('click', () => {
+      state.sendAs = btn.dataset.send;
+      syncActionButtons();
+    });
+  }
+
+  /** The save note under the export card: the file name, what was hidden, and the metadata re-check. */
+  function showSaveNote(name, clean, pagesIn) {
+    const note = $('save-note');
+    const hidden = pagesIn.reduce((n, p) => n + p.regions.length, 0);
+    const stripped = state.doc.meta.fields.length;
+    note.className = `save-note ${clean ? '' : 'bad'}`;
+    note.textContent = clean
+      ? `✓ Saved ${name} · ${hidden} region${hidden === 1 ? '' : 's'} hidden · ${stripped ? stripped + ' metadata field' + (stripped === 1 ? '' : 's') + ' removed · ' : ''}re-checked: 0 metadata fields in the output`
+      : `Saved ${name}, but a metadata check still found data. Please report this bug.`;
+    note.hidden = false;
+  }
+
+  /** Release what an action names, then fire `result` with exactly that. Runs only from a click on its button. */
+  async function runAction(action, btn) {
+    if (actionBlocked(action)) return;
+    const outputs = outputsFor(action);
+    const detail = {
+      action: action.id, outputs, findings: state.doc ? activeFindings() : [], truncated: !!state.doc?.truncated,
+    };
+    // An action that releases nothing only reports the click. No document data leaves.
+    if (!outputs.length) {
+      emit('result', detail);
+      return;
+    }
+    const idle = action.label;
+    btn.disabled = true; btn.textContent = action.busyLabel;
+    try {
+      const ex = await import('../io/exporter.js');
+      const opts = { style: state.style, strength: state.strength };
+      const pagesIn = state.doc.pages.map((p) => ({ canvas: p.canvas, regions: activeRegions(p) }));
+      if (outputs.includes('file')) {
+        const format = action.format || $('format').value;
+        const res = state.doc.kind === 'pdf'
+          ? await ex.exportPdf(pagesIn, opts)
+          : await ex.exportImage(pagesIn[0], { ...opts, format });
+        const name = ex.outputName(state.doc.name, res.ext);
+        if (action.download) ex.download(res.blob, name);
+        Object.assign(detail, { file: res.blob, filename: name, clean: res.clean });
+        if (action.download) showSaveNote(name, res.clean, pagesIn);
+      }
+      if (outputs.includes('text')) detail.transcript = redactedTranscript();
+      emit('result', detail);
+      if (!action.download) toast(`Released ${outputs.map((o) => (o === 'file' ? 'the file' : 'the text')).join(' and ')}.`);
+    } catch (err) {
+      console.error(err);
+      const note = $('save-note');
+      note.className = 'save-note bad'; note.textContent = `Export failed: ${err.message}`; note.hidden = false;
+    } finally {
+      btn.textContent = idle;
+      syncActionButtons();
+    }
+  }
+
   /** Counts of boxes still turned on, one entry per category that has any. */
   function activeFindings() {
     const counts = {};
@@ -282,7 +423,7 @@ export function attachController(host, initial = {}) {
     $('transcript-count').textContent = bits.join(' · ');
   }
 
-  function refreshAll() { drawOverlay(); drawCategories(); drawTranscript(); schedule(); }
+  function refreshAll() { drawOverlay(); drawCategories(); drawTranscript(); syncActionButtons(); schedule(); }
 
   const STEPS = [
     ['ocr', 'Reading text'],
@@ -318,8 +459,6 @@ export function attachController(host, initial = {}) {
     state.scanning = false;
     $('scan-card').classList.add('done');
     $('scanfx').hidden = true;
-    $('btn-save').disabled = false;
-    $('btn-copy').disabled = false;
     refreshAll();
     setScan('done');
   }
@@ -335,7 +474,7 @@ export function attachController(host, initial = {}) {
     $('scan-card').classList.remove('done');
     $('scan-title').textContent = steps.length ? 'Scanning…' : 'Nothing selected to scan';
     $('scanfx').hidden = !steps.length;
-    $('btn-save').disabled = true; $('btn-copy').disabled = true;
+    syncActionButtons();
     initSteps(steps);
     const scope = scanScopeText(prefs);
     const scopeEl = $('scan-scope');
@@ -476,6 +615,7 @@ export function attachController(host, initial = {}) {
     state.run++;
     state.doc = null;
     state.scanning = false;
+    syncActionButtons();
     setScan('');
     setScreen('drop');
     $('file').value = '';
@@ -738,43 +878,8 @@ export function attachController(host, initial = {}) {
   overlay.addEventListener('pointerup', endDrag);
   overlay.addEventListener('pointercancel', endDrag);
 
-  $('btn-save').addEventListener('click', async () => {
-    if (!state.doc || state.scanning) return;
-    const btn = $('btn-save');
-    const label = btn.textContent;
-    btn.disabled = true; btn.textContent = 'Sanitizing…';
-    const note = $('save-note');
-    try {
-      const ex = await import('../io/exporter.js');
-      const opts = { style: state.style, strength: state.strength };
-      const pagesIn = state.doc.pages.map((p) => ({ canvas: p.canvas, regions: activeRegions(p) }));
-      let res;
-      if (state.doc.kind === 'pdf') res = await ex.exportPdf(pagesIn, opts);
-      else res = await ex.exportImage(pagesIn[0], { ...opts, format: $('format').value });
-      const name = ex.outputName(state.doc.name, res.ext);
-      ex.download(res.blob, name);
-      const hidden = pagesIn.reduce((n, p) => n + p.regions.length, 0);
-      const stripped = state.doc.meta.fields.length;
-      note.className = `save-note ${res.clean ? '' : 'bad'}`;
-      note.textContent = res.clean
-        ? `✓ Saved ${name} · ${hidden} region${hidden === 1 ? '' : 's'} hidden · ${stripped ? stripped + ' metadata field' + (stripped === 1 ? '' : 's') + ' removed · ' : ''}re-checked: 0 metadata fields in the output`
-        : `Saved ${name}, but a metadata check still found data. Please report this bug.`;
-      note.hidden = false;
-      emit('result', {
-        file: res.blob,
-        filename: name,
-        findings: activeFindings(),
-        clean: res.clean,
-        truncated: !!state.doc.truncated,
-        transcript: redactedTranscript(),
-      });
-    } catch (err) {
-      console.error(err);
-      note.className = 'save-note bad'; note.textContent = `Export failed: ${err.message}`; note.hidden = false;
-    } finally {
-      btn.disabled = false; btn.textContent = label;
-    }
-  });
+  // The built-in Save button runs the same release path as a host action.
+  $('btn-save').addEventListener('click', () => runAction(state.actions.find((a) => a.builtin) || downloadAction(), $('btn-save')));
   $('transcript-toggle').addEventListener('click', () => {
     setTranscriptOpen($('transcript-panel').hidden);
   });
@@ -822,6 +927,7 @@ export function attachController(host, initial = {}) {
 
   if (initial.style) setStyle(initial.style);
   if (initial.strength != null) setStrength(initial.strength);
+  setActions(initial.actions);
   setScreen('drop');
 
   return {
@@ -831,6 +937,8 @@ export function attachController(host, initial = {}) {
     home,
     setStyle,
     setStrength,
+    setActions,
+    getActions: () => state.actions,
     getStyle: () => state.style,
     getStrength: () => state.strength,
     /** Release page listeners. The element calls this when it leaves the document. */

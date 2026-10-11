@@ -157,8 +157,37 @@ plugins: [privacyRedact()]
   );
 }
 
+const CHAT_ACTIONS = [
+  { id: 'attach', label: 'Attach to chat', outputs: ['file', 'text'], choose: true, format: 'png' },
+  { id: 'cancel', label: 'Cancel', outputs: [], variant: 'ghost' },
+];
+
+/** A chat host sets its own release buttons. The person still picks what leaves and clicks. */
+export function ChatCase() {
+  const [result, setResult] = useState(null);
+  const released = result?.outputs?.length ? result.outputs.join(' + ') : 'nothing';
+
+  return (
+    <Section id="chat" kicker="Frontend - actions" title="Attach to chat">
+      <p>The host sets the button labels and what each one releases. Attach sends the file, the text, or both, as the person picks. Cancel releases nothing.</p>
+      <div className="review-frame">
+        <PrivacyRedactReview actions={CHAT_ACTIONS} onResult={setResult} />
+      </div>
+      {result ? <p className="label">{result.action}: released {released}</p> : null}
+      <ResultCard result={result} />
+      <Sample label="React" code={`<PrivacyRedactReview
+  actions={[
+    { id: 'attach', label: 'Attach to chat', outputs: ['file', 'text'], choose: true, format: 'png' },
+    { id: 'cancel', label: 'Cancel', outputs: [], variant: 'ghost' },
+  ]}
+  onResult={(result) => (result.action === 'attach' ? attach(result) : close())}
+/>`} />
+    </Section>
+  );
+}
+
 /** The file onResult handed the host after Save. */
-function ResultCard({ result }) {
+export function ResultCard({ result }) {
   const [url, setUrl] = useState('');
 
   useEffect(() => {

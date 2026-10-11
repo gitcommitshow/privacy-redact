@@ -110,8 +110,15 @@ export const reviewTemplate = `
           <select id="format"><option value="png">PNG (lossless)</option><option value="jpeg">JPG (smaller)</option></select>
         </label>
       </div>
-      <button id="btn-save" class="btn primary big">Save sanitized file</button>
-      <button id="btn-copy" class="btn ghost wide">Copy to clipboard</button>
+      <div id="send-as" class="seg" role="radiogroup" aria-label="Send as" part="send-as" hidden>
+        <button type="button" id="send-as-file" data-send="file" role="radio" aria-checked="false">Image</button>
+        <button type="button" data-send="text" role="radio" aria-checked="false">Text</button>
+        <button type="button" data-send="both" role="radio" aria-checked="true" class="on">Both</button>
+      </div>
+      <div id="actions" class="actions-list" part="actions">
+        <button id="btn-save" class="btn primary big" data-action-id="download">Save sanitized file</button>
+        <button id="btn-copy" class="btn ghost wide">Copy to clipboard</button>
+      </div>
       <div id="save-note" class="save-note" hidden></div>
       <p class="fine">Auto-detection is good, not perfect. Give the preview a quick look before you share.</p>
     </div>

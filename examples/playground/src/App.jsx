@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import { RedactCase, SpansCase, LuhnCase, TranscriptCase, RegionsCase, PrefsCase, MetaCase } from './text-cases.jsx';
 import { EffectsCase, FilesCase } from './picture-cases.jsx';
-import { ReviewCase } from './review-case.jsx';
+import { ReviewCase, ChatCase } from './review-case.jsx';
 
 const NAV = [
   { id: 'review', label: 'Frontend' },
+  { id: 'chat', label: 'Attach to chat' },
   { id: 'redact', label: 'Backend' },
   { id: 'spans', label: 'Mark spans' },
   { id: 'luhn', label: 'Check a card' },
@@ -47,6 +48,7 @@ export function App() {
         </nav>
         <main>
           <ReviewCase />
+          <ChatCase />
           <RedactCase />
           <SpansCase />
           <LuhnCase />

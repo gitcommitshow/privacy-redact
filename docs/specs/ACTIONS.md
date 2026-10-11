@@ -1,6 +1,6 @@
 # Review actions
 
-Status: proposed.
+Status: proposed. Step 2 (the `actions` list) is in the code in `src/review/actions.js`. Steps 3 to 5 are not.
 
 Today the review screen ends in one fixed button, "Save sanitized file", which downloads the file and then fires `result`. A host that embeds the screen in a chat app wants that last step to say "Send" or "Attach", to release the redacted text instead of the file, and to look like the rest of the app. This spec lets the host configure the release step, keeps the review step sealed, and states what each side is responsible for.
 
