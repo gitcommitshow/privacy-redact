@@ -44,10 +44,12 @@ export function privacyRedact() {
         optimizeDeps: {
           // The review screen imports these on the first file. Prebundle them so that
           // discovery does not reload the page and discard the open document.
-          exclude: ['privacy-redact'],
+          // pdfjs-dist is not prebundled. A prebundle would make the host's copy serve every
+          // import, while the worker URL comes from the copy that owns loader.js. Two versions
+          // then fail with "The API version does not match the Worker version".
+          exclude: ['privacy-redact', 'pdfjs-dist'],
           include: [
             'exifr',
-            'pdfjs-dist',
             'pdf-lib',
             'tesseract.js',
             '@zxing/library',

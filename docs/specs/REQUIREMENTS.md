@@ -55,7 +55,7 @@ These describe the browser harness as it works today.
 - ✅ Copy to clipboard writes the redacted PNG only, and only when the user asks.
 - ✅ The download name is the original name plus `-redacted`.
 - ✅ Show the words the scanner read for the whole document, folded until the user opens it.
-- ✅ That reading is redacted by default. The covered fields are the ones still hidden in the preview. A switch shows the original words.
+- ✅ That reading is redacted by default. The covered words are the ones under a box that is still on, including boxes drawn by hand, faces, and barcodes. A box that is turned off shows its words. A switch shows the original words.
 - ✅ One click copies every page of whichever reading is showing. Copy stays off until every page has been read. A document of more than one page keeps its page numbers in that text.
 
 ### Privacy of the browser app

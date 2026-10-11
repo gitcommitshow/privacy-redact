@@ -7,6 +7,7 @@ The page imports the library by name. It does not copy detectors. A better detec
 | Section | Call | Use it when |
 | --- | --- | --- |
 | Frontend | `PrivacyRedactReview` from `privacy-redact/react` | Drop an image or PDF. The step list is the scan running in the tab |
+| Attach to chat | `PrivacyRedactReview` with `actions` | A chat host sets its own button labels and what each button releases |
 | Backend | `redactDocument` | Paste a message. The page posts it, the server redacts it |
 | Mark spans | `findSensitive` | Your own editor wants ranges, not a rewritten string |
 | Check a card | `luhn` | A form should accept a card number only when the checksum holds |

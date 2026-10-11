@@ -4,6 +4,7 @@
  */
 import { reviewTemplate } from './template.js';
 import { attachController } from './controller.js';
+import { normalizeActions } from './actions.js';
 import reviewCss from './review.css?inline';
 
 export const REVIEW_TAG = 'privacy-redact-review';
@@ -61,6 +62,18 @@ class PiiRedactReview extends HTMLElement {
     this._api?.setStrength(this._strength);
   }
 
+  /** The release buttons, as a list of actions. Set it before or after the file opens. */
+  get actions() {
+    return this._api?.getActions() ?? this._actions ?? null;
+  }
+
+  /** A list that breaks the rules throws a TypeError, and the screen keeps its previous list. */
+  set actions(value) {
+    normalizeActions(value);
+    this._actions = value;
+    this._api?.setActions(value);
+  }
+
   /** A file assigned here opens in the review flow. */
   get file() {
     return this._pendingFile ?? null;
@@ -82,6 +95,7 @@ class PiiRedactReview extends HTMLElement {
     this._api = attachController(this, {
       style: this._redactStyle || this.getAttribute('redact-style') || undefined,
       strength: this._strength ?? (strengthAttr != null && strengthAttr !== '' ? Number(strengthAttr) : undefined),
+      actions: this._actions,
     });
     if (this._pendingFile) this._api.open(this._pendingFile);
   }
