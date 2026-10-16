@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.1.0](https://github.com/gitcommitshow/privacy-redact/compare/v1.0.3...v1.1.0) (2026-10-16)
+
+
+### Features
+
+* transcript for manually redacted text ([#26](https://github.com/gitcommitshow/privacy-redact/issues/26)) ([276b61a](https://github.com/gitcommitshow/privacy-redact/commit/276b61ac292f7f175855c935150fd6b499c3c923))
+
+
+### Bug Fixes
+
+* file preview going out of bound ([#24](https://github.com/gitcommitshow/privacy-redact/issues/24)) ([9f61192](https://github.com/gitcommitshow/privacy-redact/commit/9f61192f7feb6ebee4147bd63378e8edee3fd446))
+
 ## [1.0.3](https://github.com/gitcommitshow/privacy-redact/compare/v1.0.2...v1.0.3) (2026-10-10)
 
 
